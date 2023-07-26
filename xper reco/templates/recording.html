@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fleet - Web_Tracker_Recording</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Fleet - Web_Tracker</h1>
+
+        <!-- Start Recording Button -->
+        <button id="startRecordingBtn">Start Recording</button>
+
+        <!-- Stop Recording Button -->
+        <button id="stopRecordingBtn" disabled>Stop Recording</button>
+
+        <!-- View JSON Button -->
+        <button id="viewJSONBtn" disabled>View JSON</button>
+
+        <!-- Div to display recorded actions -->
+        <div id="recordedActions"></div>
+    </div>
+
+    <!-- Your existing login form and other elements -->
+
+    <!-- Include the JS file from the "static" folder -->
+    <script src="{{ url_for('static', filename='your_script.js') }}"></script>
+</body>
+</html>
