@@ -1,8 +1,11 @@
+// your_script.js
+
+// Frontend code
 let recording = false;
 let recordedActions = [];
-
-let typingTimer; // Timer identifier for delaying typing recording
-const typingDelay = 1000; // Delay in milliseconds before recording typing
+let typingTimer;
+const typingDelay = 1000; // Adjust the delay as needed
+let userGivenUrl = ""; // Variable to store the user-provided URL
 
 document.getElementById("startRecordingBtn").addEventListener("click", () => {
     startRecording();
@@ -14,6 +17,30 @@ document.getElementById("stopRecordingBtn").addEventListener("click", () => {
 
 document.getElementById("viewJSONBtn").addEventListener("click", () => {
     viewJSON();
+});
+function redirectAfterRecording() {
+    const redirectUrl = document.getElementById("redirectUrl").value;
+    // Perform any client-side validation if needed.
+    if (redirectUrl.trim() !== "") {
+        // Redirect to the specified URL in the same tab
+        window.location.href = redirectUrl;
+        // Store the user-provided URL in a variable to be used as the target in recorded actions
+        userGivenUrl = redirectUrl;
+    }
+}
+
+// Function to handle scroll actions
+window.addEventListener('scroll', (event) => {
+    const scrollData = {
+        timestamp: new Date().toISOString(),
+        type: 'scroll',
+        target: 'window',
+        data: {
+            scrollX: window.scrollX,
+            scrollY: window.scrollY,
+        },
+    };
+    recordedActions.push(scrollData);
 });
 
 function startRecording() {
@@ -36,6 +63,10 @@ function startRecording() {
     // Add event listener for page navigation (e.g., clicking links)
     document.querySelectorAll("a").forEach(link => {
         link.addEventListener("click", handleAction);
+    document.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", handleNavigationAction);
+        });
+        
     });
     // Add more event listeners for other actions if needed
 }
@@ -58,7 +89,11 @@ function stopRecording() {
 
     // Remove event listener for page navigation (e.g., clicking links)
     document.querySelectorAll("a").forEach(link => {
-        link.removeEventListener("click", handleAction);
+           link.removeEventListener("click", handleAction);
+    document.querySelectorAll("a").forEach(link => {
+            link.removeEventListener("click", handleNavigationAction);
+        });
+    
     });
     // Remove more event listeners for other actions if needed
 
@@ -66,43 +101,34 @@ function stopRecording() {
     displayRecordedActions();
 }
 
+// Function to handle various actions
 function handleAction(event) {
-    // Extract relevant information from the event object based on the action type
     const actionType = event.type;
     const targetElement = event.target.id; // Adjust this based on how you want to identify the element (e.g., using classes, data attributes, etc.)
 
-    // Record the action with the timestamp
     const recordedAction = {
         timestamp: new Date().toISOString(),
         type: actionType,
         target: targetElement,
     };
 
-    // If it's a form submission, you may want to capture the form data
     if (actionType === "submit") {
-        event.preventDefault(); // Prevent the default form submission behavior
+        event.preventDefault();
         const formData = new FormData(event.target);
         recordedAction.data = {};
         formData.forEach((value, key) => {
             recordedAction.data[key] = value;
         });
-    }
-
-    // If it's a page navigation action, record the target URL
-    if (actionType === "click" && event.target.tagName === "A") {
+    } if (actionType === "click" && event.target.tagName === "A") {
         recordedAction.type = "navigation";
         recordedAction.data = event.target.href;
+    }if (actionType === "scroll") {
+        // Already handled by the window.addEventListener('scroll') function
+        return;
     }
 
-    // If it's a mouseover or mouseout action, record the target element's ID
-    if (actionType === "mouseover" || actionType === "mouseout") {
-        recordedAction.data = event.target.id;
-    }
-
-    // Push the recorded action to the array
     recordedActions.push(recordedAction);
 }
-
 function handleTypingAction(event) {
     // If there is an existing typing timer, clear it
     if (typingTimer) {
@@ -127,14 +153,111 @@ function handleTypingAction(event) {
         recordedActions.push(recordedAction);
     }, typingDelay);
 }
+function handleNavigationAction(event) {
+    const actionType = "navigation";
+    const targetElement = "window";
+    const navigationUrl = event.target.href;
+
+    const recordedAction = {
+        timestamp: new Date().toISOString(),
+        type: actionType,
+        target: userGivenUrl, // Use the user-provided URL as the target
+        data: navigationUrl,
+    };
+
+    recordedActions.push(recordedAction);
+}
+
 
 function displayRecordedActions() {
     const recordedActionsDiv = document.getElementById("recordedActions");
     recordedActionsDiv.innerHTML = JSON.stringify(recordedActions, null, 2);
 }
 
+
 function viewJSON() {
     // Display the JSON data in a separate modal or dialog for the user to view
     const jsonString = JSON.stringify(recordedActions, null, 2);
     alert(jsonString); // For simplicity, just use an alert to display the JSON data
 }
+
+// Puppeteer code
+// ... Paste the Puppeteer code here ...
+// your_script.js
+
+// Frontend code
+// ... The previous frontend code ...
+
+// Function to send recorded actions to the server
+
+function sendRecordedActionsToServer(actions) {
+    fetch('/record_actions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(actions),
+    })
+    .then(() => {
+        console.log('Actions recorded and sent successfully.');
+    })
+    .catch((error) => {
+        console.error('Error sending recorded actions:', error);
+    });
+}
+
+// Puppeteer code
+async function runPuppeteerAndRecordActions() {
+    const puppeteer = require('puppeteer');
+
+    const browser = await puppeteer.launch({
+        // headless: false, slowMo: 100, // Uncomment to visualize the test
+    });
+
+    const page = await browser.newPage();
+
+    // Load the website you want to record actions on (retrieve the URL from the frontend)
+    const url = 'https://example.com'; // Replace with the URL provided by the user
+    await page.goto(url);
+
+    // Function to add a scroll action to the recorded actions
+    const recordScrollAction = async (distance) => {
+        await page.evaluate((scrollDistance) => {
+            window.scrollBy(0, scrollDistance);
+        }, distance);
+        await page.waitForTimeout(500); // Optional delay to wait after each scroll
+    };
+
+    // Array to store the recorded actions
+
+    const recordedActions = [];
+    // Record actions here
+    // Example: Click a button
+    await page.waitForSelector('button');
+    await page.click('button');
+    recordedActions.push({ timestamp: new Date().toISOString(), type: 'click', target: 'button', data: 'Button clicked' });
+
+    // Example: Input text
+    await page.waitForSelector('input');
+    await page.type('input', 'Hello, World!');
+    recordedActions.push({ timestamp: new Date().toISOString(), type: 'input', target: 'input', data: 'Hello, World!' });
+
+    // Example: Scroll down
+    await recordScrollAction(300); // Adjust the scroll distance as needed
+    recordedActions.push({ timestamp: new Date().toISOString(), type: 'scroll', direction: 'down', distance: 300 });
+
+    // Example: Scroll up
+    await recordScrollAction(-200); // Adjust the scroll distance as needed
+    recordedActions.push({ timestamp: new Date().toISOString(), type: 'scroll', direction: 'up', distance: -200 });
+
+    // Close the browser after recording actions
+    await browser.close();
+
+    // Send the recorded actions to the server
+    sendRecordedActionsToServer(recordedActions);
+}
+
+// Call the function to run Puppeteer and record actions
+document.getElementById("startPuppeteerBtn").addEventListener("click", () => {
+    runPuppeteerAndRecordActions();
+});
